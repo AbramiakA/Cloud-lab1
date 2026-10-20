@@ -10,6 +10,6 @@ variable "project" {
 
 variable "github_repository" {
   type        = string
-  description = "GitHub repository in OWNER/REPO format"
-  default     = "AbramiakA/Cloud-lab1"
+  description = "GitHub immutable repository identifier for OIDC"
+  default     = "AbramiakA@152866337/Cloud-lab1@1427139567"
 }
