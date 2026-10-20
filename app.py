@@ -48,6 +48,29 @@ def health():
         if connection:
             connection.close()
 
+@app.route('/', methods=['GET'])
+def home():
+    return """
+    <h1>Cloud Lab 1</h1>
+    <h2>E-commerce REST API</h2>
+
+    <p><b>Author:</b> Anna Abramiak</p>
+    <p>Laboratory work: Deployment of an application to AWS</p>
+
+    <p>The application is built with Flask and MySQL and deployed using:</p>
+    <ul>
+        <li>Docker</li>
+        <li>Terraform</li>
+        <li>AWS ECS Fargate</li>
+        <li>Amazon RDS</li>
+        <li>Application Load Balancer</li>
+        <li>GitHub Actions</li>
+    </ul>
+
+    <p><a href="/health">Health check</a></p>
+    <p><a href="/api/categories">API categories</a></p>
+    """
+
 initialize_database()
 
 # 3. Головна точка входу
