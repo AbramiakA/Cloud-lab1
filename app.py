@@ -37,7 +37,7 @@ def health():
         cursor.execute("SELECT 1")
         cursor.fetchone()
 
-        return {"status": "ok"}, 200
+        return {"status": "ok", "deployment": "github-actions"}, 200
 
     except Exception:
         return {"status": "error"}, 503
