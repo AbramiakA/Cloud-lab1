@@ -1,3 +1,4 @@
+#AWS починає довіряти токенам, які видає GitHub Actions
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com" #GitHub Actions видає OIDC tokens
 
@@ -6,6 +7,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 }
 
+#Хто має право взяти GitHub IAM Role?
 data "aws_iam_policy_document" "github_assume_role" {
   statement {
     effect = "Allow"
@@ -18,22 +20,22 @@ data "aws_iam_policy_document" "github_assume_role" {
       type = "Federated" #зовнішня система, якій довіряємо через federated
 
       identifiers = [
-        aws_iam_openid_connect_provider.github.arn # який Federated Provider може використовувати це правило
+        aws_iam_openid_connect_provider.github.arn # який Provider може використовувати це правило
       ]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:aud"
+      variable = "token.actions.githubusercontent.com:aud"  #для кого виданий 
 
       values = [
-        "sts.amazonaws.com"
+        "sts.amazonaws.com"  #STS перевіряє token
       ]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:sub"
+      variable = "token.actions.githubusercontent.com:sub"  #хто пред'явив token
 
       values = [
         "repo:${var.github_repository}:ref:refs/heads/main"
@@ -73,10 +75,11 @@ resource "aws_iam_role_policy" "github_actions" {
 
         Action = [
           "ecr:BatchCheckLayerAvailability", #Чи є вже цей layer у ECR
+          "ecr:BatchGetImage",               #Перевірка маніфесту образу
           "ecr:InitiateLayerUpload",         #почати завантаження нового layer
           "ecr:UploadLayerPart",             #завантажувати шматки layer
           "ecr:CompleteLayerUpload",         #закінчити завантаження layer
-          "ecr:PutImage"                     #зареєструвати image manifest і tag
+          "ecr:PutImage"                     #зареєструвати image і tag
         ]
 
         Resource = aws_ecr_repository.app.arn
@@ -87,7 +90,7 @@ resource "aws_iam_role_policy" "github_actions" {
         Effect = "Allow"
 
         Action = [
-          "ecs:DescribeTaskDefinition" #прочитати поточну Task Definition
+          "ecs:DescribeTaskDefinition" #прочитати Task Definition(шоб потім в ній змінити імедж)
         ]
 
         Resource = "*"
