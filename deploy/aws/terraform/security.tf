@@ -1,3 +1,5 @@
+#правилами, хто з ким може з’єднуватись і по яких портах
+
 resource "aws_security_group" "app" {
   name        = "${var.project}-app-sg"
   description = "Security group for ECS Fargate application"
@@ -18,15 +20,6 @@ resource "aws_security_group" "db" {
   }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "db_from_app" {
-  security_group_id            = aws_security_group.db.id
-  referenced_security_group_id = aws_security_group.app.id
-
-  from_port   = 3306
-  to_port     = 3306
-  ip_protocol = "tcp"
-}
-
 resource "aws_security_group" "alb" {
   name        = "${var.project}-alb-sg"
   description = "Security group for Application Load Balancer"
@@ -40,13 +33,13 @@ resource "aws_security_group" "alb" {
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
 
-  cidr_ipv4   = "0.0.0.0/0"
+  cidr_ipv4   = "0.0.0.0/0" #зі всього інтернету але тільки http
   from_port   = 80
   to_port     = 80
   ip_protocol = "tcp"
 }
 
-resource "aws_vpc_security_group_egress_rule" "alb_to_app" {
+resource "aws_vpc_security_group_egress_rule" "alb_to_app" { #від abl до app
   security_group_id            = aws_security_group.alb.id
   referenced_security_group_id = aws_security_group.app.id
 
@@ -55,7 +48,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_app" {
   ip_protocol = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "app_from_alb" {
+resource "aws_vpc_security_group_ingress_rule" "app_from_alb" { #app дозволяє тільки abl
   security_group_id            = aws_security_group.app.id
   referenced_security_group_id = aws_security_group.alb.id
 
@@ -73,7 +66,16 @@ resource "aws_vpc_security_group_egress_rule" "app_to_db" {
   ip_protocol = "tcp"
 }
 
-resource "aws_vpc_security_group_egress_rule" "app_https" {
+resource "aws_vpc_security_group_ingress_rule" "db_from_app" {
+  security_group_id            = aws_security_group.db.id
+  referenced_security_group_id = aws_security_group.app.id #тільки апп секюріті груп(APP SG → DB SG)
+
+  from_port   = 3306
+  to_port     = 3306
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "app_https" { #ECS application дозволено виходити назовні по HTTPS
   security_group_id = aws_security_group.app.id
 
   cidr_ipv4   = "0.0.0.0/0"
@@ -82,10 +84,10 @@ resource "aws_vpc_security_group_egress_rule" "app_https" {
   ip_protocol = "tcp"
 }
 
-resource "aws_vpc_security_group_egress_rule" "app_dns_udp" {
+resource "aws_vpc_security_group_egress_rule" "app_dns_udp" { #ecs буде робити dns запити
   security_group_id = aws_security_group.app.id
 
-  cidr_ipv4   = module.vpc.vpc_cidr_block
+  cidr_ipv4   = module.vpc.vpc_cidr_block #тільки всередині vpc, не в інтерет
   from_port   = 53
   to_port     = 53
   ip_protocol = "udp"
@@ -97,5 +99,32 @@ resource "aws_vpc_security_group_egress_rule" "app_dns_tcp" {
   cidr_ipv4   = module.vpc.vpc_cidr_block
   from_port   = 53
   to_port     = 53
+  ip_protocol = "tcp"
+}
+
+# Security Group для Redis
+resource "aws_security_group" "redis" {
+  name        = "${var.project}-redis-sg"
+  description = "Security group for Redis OSS"
+  vpc_id      = module.vpc.vpc_id
+}
+
+# ECS може підключатися до Redis
+resource "aws_vpc_security_group_egress_rule" "app_to_redis" {
+  security_group_id            = aws_security_group.app.id
+  referenced_security_group_id = aws_security_group.redis.id
+
+  from_port   = 6379
+  to_port     = 6379
+  ip_protocol = "tcp"
+}
+
+# Redis приймає підключення тільки від ECS
+resource "aws_vpc_security_group_ingress_rule" "redis_from_app" {
+  security_group_id            = aws_security_group.redis.id
+  referenced_security_group_id = aws_security_group.app.id
+
+  from_port   = 6379
+  to_port     = 6379
   ip_protocol = "tcp"
 }

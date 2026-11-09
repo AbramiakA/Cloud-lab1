@@ -1,0 +1,148 @@
+{
+    "metrics": {
+        "http_req_duration{expected_response:true}": {
+            "avg": 489.0879293936575,
+            "min": 15.2553,
+            "max": 2294.6421,
+            "p(50)": 505.77525,
+            "p(95)": 1100.75934,
+            "p(99)": 1292.23341
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 76690,
+            "value": 0
+        },
+        "checks": {
+            "passes": 84359,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_connecting": {
+            "max": 37.8121,
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0.03815388838179685,
+            "min": 0
+        },
+        "http_req_waiting": {
+            "p(95)": 1099.814965,
+            "p(99)": 1291.235775,
+            "avg": 487.79230668143805,
+            "min": 13.0163,
+            "max": 2292.9871,
+            "p(50)": 504.7312
+        },
+        "vus_max": {
+            "value": 100,
+            "min": 100,
+            "max": 100
+        },
+        "iterations": {
+            "count": 7669,
+            "rate": 12.759571053575282
+        },
+        "http_req_sending": {
+            "max": 4.3398,
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0.5776220000000001,
+            "avg": 0.01611052288433956,
+            "min": 0
+        },
+        "data_sent": {
+            "count": 10687806,
+            "rate": 17782.21672497434
+        },
+        "http_req_receiving": {
+            "avg": 1.2795121893336863,
+            "min": 0,
+            "max": 314.6408,
+            "p(50)": 0.69425,
+            "p(95)": 2.791070000000004,
+            "p(99)": 6.5903220000000005
+        },
+        "vus": {
+            "min": 1,
+            "max": 100,
+            "value": 1
+        },
+        "http_req_duration": {
+            "p(50)": 505.77525,
+            "p(95)": 1100.75934,
+            "p(99)": 1292.23341,
+            "avg": 489.0879293936575,
+            "min": 15.2553,
+            "max": 2294.6421
+        },
+        "http_req_blocked": {
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0.043608424827226475,
+            "min": 0,
+            "max": 83.1401
+        },
+        "iteration_duration": {
+            "p(95)": 10999.50442,
+            "p(99)": 11496.524943999999,
+            "avg": 5893.89573193379,
+            "min": 1323.076,
+            "max": 12295.4504,
+            "p(50)": 5274.6878
+        },
+        "http_reqs": {
+            "count": 76690,
+            "rate": 127.59571053575281
+        },
+        "data_received": {
+            "count": 118082662,
+            "rate": 196464.22166961976
+        },
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0,
+            "min": 0
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "Product created (201)": {
+                    "name": "Product created (201)",
+                    "path": "::Product created (201)",
+                    "id": "63522406a172a174b046f3657afdcfb1",
+                    "passes": 7669,
+                    "fails": 0
+                },
+                "Catalog page read (200)": {
+                    "name": "Catalog page read (200)",
+                    "path": "::Catalog page read (200)",
+                    "id": "1f7428149c9b00be0f940a34f373089d",
+                    "passes": 7669,
+                    "fails": 0
+                },
+                "Product read (200)": {
+                    "path": "::Product read (200)",
+                    "id": "2c679f6073e0960fdb4ad51480e2afee",
+                    "passes": 61352,
+                    "fails": 0,
+                    "name": "Product read (200)"
+                },
+                "Correct product ID": {
+                    "id": "2fda70e03007aee504dd5d88aead16c1",
+                    "passes": 7669,
+                    "fails": 0,
+                    "name": "Correct product ID",
+                    "path": "::Correct product ID"
+                }
+            }
+    }
+}

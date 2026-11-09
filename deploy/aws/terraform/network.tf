@@ -1,4 +1,4 @@
-module "vpc" {
+module "vpc" {   #Virtual Private Cloud(ізольована мережа)
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 

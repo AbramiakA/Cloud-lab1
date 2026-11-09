@@ -1,11 +1,17 @@
-resource "aws_cloudwatch_log_group" "app" {
+resource "aws_cloudwatch_log_group" "app" {    #шоб писати логи
   name              = "/ecs/${var.project}-app"
   retention_in_days = 7
 }
 
-resource "aws_ecs_cluster" "main" {
+resource "aws_ecs_cluster" "main" {      #тут ECS організовує наші services і tasks
   name = "${var.project}-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
+
 
 #інструкція
 resource "aws_ecs_task_definition" "app" {
@@ -14,22 +20,22 @@ resource "aws_ecs_task_definition" "app" {
   requires_compatibilities = ["FARGATE"]
 
   cpu    = "256"
-  memory = "512"
+  memory = "512"  #мб
 
-  execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  execution_role_arn = aws_iam_role.ecs_task_execution.arn   #права ECS для запуску контейнера
 
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
   }
 
-  container_definitions = jsonencode([
+  container_definitions = jsonencode([  #опис самого контейнера який працює в таск
     {
       name      = "app"
-      image     = "${aws_ecr_repository.app.repository_url}:1.0"
+      image     = "${aws_ecr_repository.app.repository_url}:1.3"   #початковий імедж
       essential = true
 
-      portMappings = [
+      portMappings = [   #мережевий порт
         {
           containerPort = 5000
           hostPort      = 5000
@@ -64,16 +70,16 @@ resource "aws_ecs_task_definition" "app" {
   ])
 }
 
-#підтримує застосунок живим
+#підтримує застосунок живим (сервіс)
 resource "aws_ecs_service" "app" {
   name            = "${var.project}-service"
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = aws_ecs_cluster.main.id  #сервіс працює в кластері
   task_definition = aws_ecs_task_definition.app.arn
 
   desired_count = 1
   launch_type   = "FARGATE"
 
-  health_check_grace_period_seconds = 120
+  health_check_grace_period_seconds = 120   #120 сек на старт
 
   network_configuration {
     subnets = module.vpc.private_subnets
@@ -92,6 +98,14 @@ resource "aws_ecs_service" "app" {
   }
 
   depends_on = [
-    aws_lb_listener.http
+    aws_lb_listener.http  #сервіс створюється тільки якщо вже є лісенер
   ]
+
+  lifecycle {
+    ignore_changes = [
+      desired_count,    #кількість контейнерів контролює Auto Scaling
+      task_definition   #версію застосунку оновлює GitHub Actions
+    ]
+  }
+
 }

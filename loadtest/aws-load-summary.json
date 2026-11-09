@@ -1,0 +1,148 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "p(99)": 0.7112200000000005,
+            "avg": 0.04599582039269359,
+            "min": 0,
+            "max": 6.203,
+            "p(50)": 0,
+            "p(95)": 0.5158
+        },
+        "http_req_waiting": {
+            "min": 20.2662,
+            "max": 15997.982,
+            "p(50)": 41.6329,
+            "p(95)": 164.04062000000042,
+            "p(99)": 4866.234884000015,
+            "avg": 193.04956025688276
+        },
+        "iteration_duration": {
+            "avg": 1803.8437970569585,
+            "min": 1025.0325,
+            "max": 21532.3586,
+            "p(50)": 1062.3867,
+            "p(95)": 6192.353549999997,
+            "p(99)": 9308.260207999982
+        },
+        "vus_max": {
+            "value": 20,
+            "min": 20,
+            "max": 20
+        },
+        "checks": {
+            "passes": 18686,
+            "fails": 12999,
+            "value": 0.5897427804955025
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 20
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(99)": 5852.609711999972,
+            "avg": 310.47106450727415,
+            "min": 23.3963,
+            "max": 20130.4594,
+            "p(50)": 44.5626,
+            "p(95)": 1797.8069000000016
+        },
+        "iterations": {
+            "count": 4723,
+            "rate": 8.732357392091911
+        },
+        "http_req_connecting": {
+            "avg": 0.04059800494814971,
+            "min": 0,
+            "max": 130.662,
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "max": 0,
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "http_req_failed": {
+            "passes": 8068,
+            "fails": 10929,
+            "value": 0.4246986366268358
+        },
+        "http_reqs": {
+            "rate": 35.12356412821724,
+            "count": 18997
+        },
+        "http_req_duration": {
+            "p(50)": 42.8636,
+            "p(95)": 165.72034000000025,
+            "p(99)": 5062.4355920000025,
+            "avg": 199.46054232247195,
+            "min": 21.6582,
+            "max": 20130.4594
+        },
+        "http_req_blocked": {
+            "avg": 0.05241661841343376,
+            "min": 0,
+            "max": 182.509,
+            "p(50)": 0,
+            "p(95)": 0,
+            "p(99)": 0.5392240000000005
+        },
+        "data_received": {
+            "count": 211551242,
+            "rate": 391137.21191719774
+        },
+        "data_sent": {
+            "count": 3170509,
+            "rate": 5861.955897277987
+        },
+        "http_req_receiving": {
+            "avg": 6.364986245196601,
+            "min": 0,
+            "max": 4132.4774,
+            "p(50)": 0.788,
+            "p(95)": 8.356820000000003,
+            "p(99)": 148.03049600000404
+        }
+    },
+    "root_group": {
+        "checks": {
+            "Product created (201)": {
+                "name": "Product created (201)",
+                "path": "::Product created (201)",
+                "id": "63522406a172a174b046f3657afdcfb1",
+                "passes": 1586,
+                "fails": 3137
+            },
+            "Product read (200)": {
+                "passes": 7757,
+                "fails": 4931,
+                "name": "Product read (200)",
+                "path": "::Product read (200)",
+                "id": "2c679f6073e0960fdb4ad51480e2afee"
+            },
+            "Correct product ID": {
+                "name": "Correct product ID",
+                "path": "::Correct product ID",
+                "id": "2fda70e03007aee504dd5d88aead16c1",
+                "passes": 7757,
+                "fails": 4931
+            },
+            "Product list received (200)": {
+                "passes": 1586,
+                "fails": 0,
+                "name": "Product list received (200)",
+                "path": "::Product list received (200)",
+                "id": "61cac432bd49224b4f2eaf3e5987f858"
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

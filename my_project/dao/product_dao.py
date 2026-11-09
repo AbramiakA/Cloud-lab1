@@ -1,196 +1,164 @@
-# --- my_project/dao/product_dao.py ---
+"""SQL operations for products. Connections are returned to the pool."""
 
-import mysql.connector
+from contextlib import closing
+
 from my_project.database import get_db_connection
 from my_project.domain.product import Product
-from my_project.domain.subcategory import Subcategory # <-- Переконайся, що цей імпорт є
 
-def find_all_products():
-    """Отримує всі товари з БД разом з даними про підкатегорії І категорії."""
-    conn = get_db_connection()
-    if conn is None: return []
 
-    cursor = conn.cursor(dictionary=True)
-    
-    # --- ОНОВЛЕНИЙ ЗАПИТ (DOUBLE JOIN) ---
-    query = """
-    SELECT 
-        p.*, 
+PRODUCT_SELECT = """
+    SELECT
+        p.*,
         s.name AS subcategory_name,
-        s.Categories_id, 
+        s.Categories_id,
         c.name AS category_name
-    FROM 
-        products p
-    LEFT JOIN 
-        subcategories s ON p.Subcategories_id = s.id
-    LEFT JOIN
-        categories c ON s.Categories_id = c.id
-    """
-    # --- КІНЕЦЬ ОНОВЛЕННЯ ---
+    FROM products p
+    LEFT JOIN subcategories s ON p.Subcategories_id = s.id
+    LEFT JOIN categories c ON s.Categories_id = c.id
+"""
 
-    cursor.execute(query)
-    results = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    
-    # Конвертуємо list[dict] у list[Product]
-    # Це спрацює, бо наш Product.__init__ тепер приймає нові поля
-    return [Product(**row) for row in results]
+
+def find_all_products(limit=20, offset=0):
+    """Read one page of products, including category details."""
+    query = PRODUCT_SELECT + " ORDER BY p.id LIMIT %s OFFSET %s"
+
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(query, (limit, offset))
+            rows = cursor.fetchall()
+
+    return [Product(**row) for row in rows]
+
+
+def find_attributes_for_products(product_ids):
+    """Fetch attributes for a page of products in one SQL query."""
+    if not product_ids:
+        return {}
+
+    placeholders = ", ".join(["%s"] * len(product_ids))
+    query = f"""
+        SELECT
+            pha.Products_id AS product_id,
+            a.name,
+            pha.value
+        FROM products_has_attributes pha
+        JOIN attributes a ON pha.Attributes_id = a.id
+        WHERE pha.Products_id IN ({placeholders})
+        ORDER BY pha.Products_id, a.id
+    """
+
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(query, tuple(product_ids))
+            rows = cursor.fetchall()
+
+    attributes_by_product = {product_id: [] for product_id in product_ids}
+    for row in rows:
+        attributes_by_product[row["product_id"]].append({
+            "name": row["name"],
+            "value": row["value"]
+        })
+
+    return attributes_by_product
+
 
 def find_product_by_id(product_id):
-    """Знаходить один товар за ID разом з даними про підкатегорію І категорію."""
-    conn = get_db_connection()
-    if conn is None: return None
-        
-    cursor = conn.cursor(dictionary=True)
-    
-    # --- ОНОВЛЕНИЙ ЗАПИТ (DOUBLE JOIN) ---
-    query = """
-    SELECT 
-        p.*, 
-        s.name AS subcategory_name,
-        s.Categories_id, 
-        c.name AS category_name
-    FROM 
-        products p
-    LEFT JOIN 
-        subcategories s ON p.Subcategories_id = s.id
-    LEFT JOIN
-        categories c ON s.Categories_id = c.id
-    WHERE 
-        p.id = %s
-    """
-    # --- КІНЕЦЬ ОНОВЛЕННЯ ---
-    
-    cursor.execute(query, (product_id,))
-    result = cursor.fetchone() 
-    cursor.close()
-    conn.close()
-    
-    return Product(**result) if result else None
+    """Read one product, including category details."""
+    query = PRODUCT_SELECT + " WHERE p.id = %s"
 
-# --- ФУНКЦІЇ НИЖЧЕ ЗАЛИШАЮТЬСЯ БЕЗ ЗМІН ---
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(query, (product_id,))
+            row = cursor.fetchone()
+
+    return Product(**row) if row else None
+
 
 def create_product(product_data):
-    """Створює новий товар, повертає його new_id."""
-    conn = get_db_connection()
-    if conn is None: return None
-
-    cursor = conn.cursor()
-    query = """
-    INSERT INTO products (name, description, price, stock_quantity, Subcategories_id)
-    VALUES (%s, %s, %s, %s, %s)
+    """Create and return a product using one DB connection and transaction."""
+    insert_query = """
+        INSERT INTO products
+            (name, description, price, stock_quantity, Subcategories_id)
+        VALUES (%s, %s, %s, %s, %s)
     """
-    data_tuple = (
-        product_data.get('name'),
-        product_data.get('description'),
-        product_data.get('price'),
-        product_data.get('stock_quantity'),
-        product_data.get('Subcategories_id')
+    values = (
+        product_data.get("name"),
+        product_data.get("description"),
+        product_data.get("price"),
+        product_data.get("stock_quantity"),
+        product_data.get("Subcategories_id")
     )
-    
-    try:
-        cursor.execute(query, data_tuple)
-        conn.commit()
-        new_id = cursor.lastrowid
-    except mysql.connector.Error as err:
-        conn.rollback() 
-        print(f"Помилка DAO (create_product): {err}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return new_id
+
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            try:
+                cursor.execute(insert_query, values)
+                new_id = cursor.lastrowid
+                cursor.execute(PRODUCT_SELECT + " WHERE p.id = %s", (new_id,))
+                row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError("Created product could not be read")
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+
+    return Product(**row)
+
 
 def update_product(product_id, product_data):
-    """Оновлює товар за ID. Повертає кількість змінених рядків (1 або 0)."""
-    conn = get_db_connection()
-    if conn is None: return 0
-
-    cursor = conn.cursor()
-    
-    set_clauses = []
-    data_values = []
-    updatable_fields = ['name', 'description', 'price', 'stock_quantity', 'Subcategories_id']
-    
-    for field in updatable_fields:
-        if field in product_data:
-            set_clauses.append(f"{field} = %s")
-            data_values.append(product_data[field])
-
-    if not set_clauses: 
-        cursor.close()
-        conn.close()
+    """Update allowed fields; return the number of changed rows."""
+    allowed_fields = [
+        "name", "description", "price", "stock_quantity", "Subcategories_id"
+    ]
+    fields = [field for field in allowed_fields if field in product_data]
+    if not fields:
         return 0
 
-    set_statement = ", ".join(set_clauses)
-    query = f"UPDATE products SET {set_statement} WHERE id = %s"
-    data_values.append(product_id) 
+    assignments = ", ".join(f"{field} = %s" for field in fields)
+    query = f"UPDATE products SET {assignments} WHERE id = %s"
+    values = tuple(product_data[field] for field in fields) + (product_id,)
 
-    rows_affected = 0
-    try:
-        cursor.execute(query, tuple(data_values))
-        conn.commit()
-        rows_affected = cursor.rowcount 
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (update_product): {err}")
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return rows_affected
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute(query, values)
+                affected = cursor.rowcount
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+
+    return affected
+
 
 def delete_product(product_id):
-    """Видаляє товар за ID. Повертає кількість видалених рядків (1 або 0)."""
-    conn = get_db_connection()
-    if conn is None: return 0
+    """Delete a product; return the number of deleted rows."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+                affected = cursor.rowcount
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
-    cursor = conn.cursor()
-    query = "DELETE FROM products WHERE id = %s"
-    
-    rows_affected = 0
-    try:
-        cursor.execute(query, (product_id,))
-        conn.commit()
-        rows_affected = cursor.rowcount 
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (delete_product): {err}")
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return rows_affected
+    return affected
+
 
 def find_attributes_for_product(product_id):
-    """
-    Знаходить усі атрибути (назва + значення) для конкретного товару.
-    Це запит для зв'язку M:M.
-    """
-    conn = get_db_connection()
-    if conn is None: return []
-
-    cursor = conn.cursor(dictionary=True)
-    
-    # --- ГОЛОВНИЙ ЗАПИТ M:M (JOIN ЧЕРЕЗ 3 ТАБЛИЦІ) ---
+    """Read attributes for a single product."""
     query = """
-    SELECT 
-        a.name, 
-        pha.value
-    FROM 
-        products_has_attributes pha
-    JOIN 
-        attributes a ON pha.Attributes_id = a.id
-    WHERE 
-        pha.Products_id = %s
+        SELECT a.name, pha.value
+        FROM products_has_attributes pha
+        JOIN attributes a ON pha.Attributes_id = a.id
+        WHERE pha.Products_id = %s
     """
-    # --- КІНЕЦЬ ЗАПИТУ ---
 
-    cursor.execute(query, (product_id,))
-    results = cursor.fetchall() # Поверне list[dict], напр. [{'name': 'Колір', 'value': 'Чорний'}, ...]
-    cursor.close()
-    conn.close()
-    
-    return results
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(query, (product_id,))
+            rows = cursor.fetchall()
+
+    return rows

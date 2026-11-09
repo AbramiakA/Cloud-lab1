@@ -1,9 +1,9 @@
-resource "random_password" "db" {
+resource "random_password" "db" {   #створ пароль для бд
   length  = 20
   special = false
 }
 
-resource "aws_db_subnet_group" "main" {
+resource "aws_db_subnet_group" "main" {  #у яких сабнет можна створювати базу
   name       = "${var.project}-db-subnet-group"
   subnet_ids = module.vpc.private_subnets
 
@@ -12,13 +12,13 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
-resource "aws_db_instance" "main" {
+resource "aws_db_instance" "main" {  #створення бд
   identifier = "${var.project}-db"
 
   engine         = "mysql"
   instance_class = "db.t4g.micro"
 
-  allocated_storage = 20
+  allocated_storage = 20  #гб
   storage_type      = "gp3"
 
   db_name  = "ecommerce_db"
@@ -29,10 +29,10 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = [aws_security_group.db.id]
 
   publicly_accessible = false
-  multi_az            = false
+  multi_az            = false  #без копії бо дешевше
 
-  skip_final_snapshot = true
-  deletion_protection = false
+  skip_final_snapshot = true  #видалити без бекапу
+  deletion_protection = false  #захист від видалення вимкнений бо треба тераформ дестрой
 
-  storage_encrypted = true
+  storage_encrypted = true   #дані зберігаютья шифр
 }

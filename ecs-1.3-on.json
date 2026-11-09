@@ -1,0 +1,72 @@
+{
+    "family":  "lab1-app",
+    "executionRoleArn":  "arn:aws:iam::020235851958:role/lab1-ecs-task-execution-role",
+    "networkMode":  "awsvpc",
+    "containerDefinitions":  [
+                                 {
+                                     "name":  "app",
+                                     "image":  "020235851958.dkr.ecr.eu-north-1.amazonaws.com/lab1-app:1.3",
+                                     "cpu":  0,
+                                     "portMappings":  [
+                                                          {
+                                                              "containerPort":  5000,
+                                                              "hostPort":  5000,
+                                                              "protocol":  "tcp"
+                                                          }
+                                                      ],
+                                     "essential":  true,
+                                     "environment":  [
+                                                         {
+                                                             "name":  "PORT",
+                                                             "value":  "5000"
+                                                         },
+                                                         {
+                                                             "name":  "CACHE_ENABLED",
+                                                             "value":  "true"
+                                                         },
+                                                         {
+                                                             "name":  "REDIS_URL",
+                                                             "value":  "rediss://master.lab1-redis.pqukjs.eun1.cache.amazonaws.com:6379/0"
+                                                         }
+                                                     ],
+                                     "mountPoints":  [
+
+                                                     ],
+                                     "volumesFrom":  [
+
+                                                     ],
+                                     "secrets":  [
+                                                     {
+                                                         "name":  "DATABASE_URL",
+                                                         "valueFrom":  "arn:aws:ssm:eu-north-1:020235851958:parameter/lab1/DATABASE_URL"
+                                                     }
+                                                 ],
+                                     "logConfiguration":  {
+                                                              "logDriver":  "awslogs",
+                                                              "options":  {
+                                                                              "awslogs-group":  "/ecs/lab1-app",
+                                                                              "awslogs-region":  "eu-north-1",
+                                                                              "awslogs-stream-prefix":  "ecs"
+                                                                          }
+                                                          },
+                                     "systemControls":  [
+
+                                                        ]
+                                 }
+                             ],
+    "volumes":  [
+
+                ],
+    "placementConstraints":  [
+
+                             ],
+    "requiresCompatibilities":  [
+                                    "FARGATE"
+                                ],
+    "cpu":  "256",
+    "memory":  "512",
+    "runtimePlatform":  {
+                            "cpuArchitecture":  "X86_64",
+                            "operatingSystemFamily":  "LINUX"
+                        }
+}

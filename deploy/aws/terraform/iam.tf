@@ -5,7 +5,7 @@ data "aws_iam_policy_document" "ecs_task_execution_assume" {
 
     principals {
       type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
+      identifiers = ["ecs-tasks.amazonaws.com"]  #цю роль можуть використовувати тільки таски ecs
     }
   }
 }
@@ -16,7 +16,7 @@ resource "aws_iam_role" "ecs_task_execution" {
   assume_role_policy = data.aws_iam_policy_document.ecs_task_execution_assume.json
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_execution" {
+resource "aws_iam_role_policy_attachment" "ecs_execution" {   #AWS policy для ECS task execution(базові права при запуску таск)
   role       = aws_iam_role.ecs_task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
@@ -37,7 +37,7 @@ resource "aws_iam_role_policy" "ecs_ssm" {
           "ssm:GetParameters"
         ]
 
-        Resource = aws_ssm_parameter.database_url.arn
+        Resource = aws_ssm_parameter.database_url.arn   #доступ тільки до урл датабейс
       }
     ]
   })

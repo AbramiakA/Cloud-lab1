@@ -1,3 +1,4 @@
+#балансувальник
 resource "aws_lb" "app" {
   name               = "${var.project}-alb"
   internal           = false #публічний
@@ -13,9 +14,9 @@ resource "aws_lb" "app" {
 #список цілей, куди ALB може відправляти запити
 resource "aws_lb_target_group" "app" {
   name        = "${var.project}-tg"
-  port        = 5000 #flack слухає порт 5000
+  port        = 5000 #flack слухає порт 5000(abl->ecs task)
   protocol    = "HTTP"
-  target_type = "ip" #ecs_service додає ip
+  target_type = "ip" #ecs_service додає приватну іп таску
   vpc_id      = module.vpc.vpc_id
 
   health_check {
@@ -30,7 +31,7 @@ resource "aws_lb_target_group" "app" {
 }
 
 
-#що ALB слухає ззовні і що робити з цим трафіком
+#що ALB слухає і що робити з цим трафіком
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80

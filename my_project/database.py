@@ -1,54 +1,56 @@
+
 import os
 import mysql.connector
-from mysql.connector import pooling
+from sqlalchemy.pool import QueuePool
 from urllib.parse import urlparse
 
-# Налаштування підключення до Бази Даних
-database_url = os.getenv('DATABASE_URL')
+
+# Налаштування підключення до бази даних
+database_url = os.getenv("DATABASE_URL")
 
 if database_url:
     parsed_url = urlparse(database_url)
 
     db_config = {
-        'host': parsed_url.hostname,
-        'port': parsed_url.port or 3306,
-        'user': parsed_url.username,
-        'password': parsed_url.password,
-        'database': parsed_url.path.lstrip('/')
+        "host": parsed_url.hostname,
+        "port": parsed_url.port or 3306,
+        "user": parsed_url.username,
+        "password": parsed_url.password,
+        "database": parsed_url.path.lstrip("/")
     }
 else:
     db_config = {
-        'host': os.getenv('DB_HOST'),
-        'user': os.getenv('DB_USER'),
-        'password': os.getenv('DB_PASSWORD'),
-        'database': os.getenv('DB_NAME')
+        "host": os.getenv("DB_HOST"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
+        "database": os.getenv("DB_NAME")
     }
 
-# Створюємо "Пул З'єднань" для ефективного використання
-try:
-    db_pool = pooling.MySQLConnectionPool(pool_name="my_pool",
-                                          pool_size=5,
-                                          **db_config)
-    print("Пул з'єднань MySQL успішно створено!")
-except mysql.connector.Error as err:
-    print(f"Помилка при створенні пулу: {err}")
-    exit()
+
+# Динамічний пул з'єднань MySQL
+db_pool = QueuePool(
+    creator=lambda: mysql.connector.connect(**db_config),
+    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+    max_overflow=int(os.getenv("DB_POOL_OVERFLOW", "5")),
+    timeout=10,
+    recycle=1800,
+    reset_on_return="rollback"
+)
+
 
 def get_db_connection():
-    """Бере одне вільне з'єднання з пулу."""
-    try:
-        conn = db_pool.get_connection()
-        if conn.is_connected():
-            return conn
-    except mysql.connector.Error as err:
-        print(f"Помилка при отриманні з'єднання: {err}")
-        return None
+    """Отримує з'єднання з пулу, очікуючи за потреби."""
+    return db_pool.connect()
+
 
 def initialize_database():
+    """Ініціалізує базу даних, якщо це ще не було зроблено."""
     connection = get_db_connection()
-    cursor = connection.cursor()
+    cursor = None
 
     try:
+        cursor = connection.cursor()
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS app_metadata (
                 id INT PRIMARY KEY,
@@ -99,5 +101,7 @@ def initialize_database():
         raise
 
     finally:
-        cursor.close()
+        if cursor is not None:
+            cursor.close()
+
         connection.close()

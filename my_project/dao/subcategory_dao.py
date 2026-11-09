@@ -1,145 +1,85 @@
-# --- my_project/dao/subcategory_dao.py ---
+"""MySQL DAO for subcategories; connections are always returned to the pool."""
 
-import mysql.connector
+from contextlib import closing
+
 from my_project.database import get_db_connection
 from my_project.domain.subcategory import Subcategory
-from my_project.domain.category import Category
+
+
+BASE_SELECT = """
+    SELECT s.*, c.name AS category_name
+    FROM subcategories s
+    LEFT JOIN categories c ON s.Categories_id = c.id
+"""
+
 
 def find_all():
-    """Отримує всі підкатегорії з БД разом з їхніми категоріями."""
-    conn = get_db_connection()
-    if conn is None: return []
+    """Return all subcategories."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(BASE_SELECT)
+            rows = cursor.fetchall()
+    return [Subcategory(**row) for row in rows]
 
-    cursor = conn.cursor(dictionary=True)
-    # ЗМІНЕНИЙ ЗАПИТ З JOIN
-    query = """
-    SELECT 
-        s.*, 
-        c.name AS category_name 
-    FROM 
-        subcategories s
-    LEFT JOIN 
-        categories c ON s.Categories_id = c.id
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    
-    return [Subcategory(**row) for row in results]
 
 def find_by_id(subcategory_id):
-    """Знаходить одну підкатегорію за її ID разом з її категорією."""
-    conn = get_db_connection()
-    if conn is None: return None
-        
-    cursor = conn.cursor(dictionary=True)
-    # ЗМІНЕНИЙ ЗАПИТ З JOIN
-    query = """
-    SELECT 
-        s.*, 
-        c.name AS category_name 
-    FROM 
-        subcategories s
-    LEFT JOIN 
-        categories c ON s.Categories_id = c.id
-    WHERE 
-        s.id = %s
-    """
-    
-    cursor.execute(query, (subcategory_id,))
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    
-    return Subcategory(**result) if result else None
+    """Return subcategory by ID or None when missing."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(BASE_SELECT + " WHERE s.id = %s", (subcategory_id,))
+            row = cursor.fetchone()
+    return Subcategory(**row) if row else None
+
 
 def create(data):
-    """Створює нову підкатегорію, повертає її new_id."""
-    conn = get_db_connection()
-    if conn is None: return None
-
-    cursor = conn.cursor()
+    """Insert a subcategory; return its new ID."""
     query = "INSERT INTO subcategories (name, Categories_id) VALUES (%s, %s)"
-    data_tuple = (
-        data.get('name'),
-        data.get('Categories_id') # Додано поле зв'язку
-    )
-    
-    try:
-        cursor.execute(query, data_tuple)
-        conn.commit()
-        new_id = cursor.lastrowid
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (create_subcategory): {err}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
-            
+    values = (data.get("name"), data.get("Categories_id"),)
+
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute(query, values)
+                new_id = cursor.lastrowid
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
     return new_id
 
+
 def update(subcategory_id, data):
-    """Оновлює підкатегорію за ID. Повертає кількість змінених рядків (1 або 0)."""
-    conn = get_db_connection()
-    if conn is None: return 0
-
-    cursor = conn.cursor()
-    
-    # Динамічне оновлення, оскільки можна змінити або 'name', або 'Categories_id'
-    set_clauses = []
-    data_values = []
-    
-    if 'name' in data:
-        set_clauses.append("name = %s")
-        data_values.append(data['name'])
-        
-    if 'Categories_id' in data:
-        set_clauses.append("Categories_id = %s")
-        data_values.append(data['Categories_id'])
-
-    if not set_clauses: # Нічого оновлювати
-        cursor.close()
-        conn.close()
+    """Update allowed columns and return affected row count."""
+    allowed = ['name', 'Categories_id']
+    fields = [name for name in allowed if name in data]
+    if not fields:
         return 0
 
-    set_statement = ", ".join(set_clauses)
-    query = f"UPDATE subcategories SET {set_statement} WHERE id = %s"
-    data_values.append(subcategory_id) 
+    assignments = ", ".join(f"{name} = %s" for name in fields)
+    query = f"UPDATE subcategories SET {assignments} WHERE id = %s"
+    values = tuple(data[name] for name in fields) + (subcategory_id,)
 
-    rows_affected = 0
-    try:
-        cursor.execute(query, tuple(data_values))
-        conn.commit()
-        rows_affected = cursor.rowcount
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (update_subcategory): {err}")
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return rows_affected
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute(query, values)
+                affected = cursor.rowcount
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+    return affected
+
 
 def delete(subcategory_id):
-    """Видаляє підкатегорію за ID. Повертає кількість видалених рядків (1 або 0)."""
-    conn = get_db_connection()
-    if conn is None: return 0
-
-    cursor = conn.cursor()
-    query = "DELETE FROM subcategories WHERE id = %s"
-    
-    rows_affected = 0
-    try:
-        cursor.execute(query, (subcategory_id,))
-        conn.commit()
-        rows_affected = cursor.rowcount 
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (delete_subcategory): {err}")
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return rows_affected
+    """Delete by ID and return affected row count."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute("DELETE FROM subcategories WHERE id = %s", (subcategory_id,))
+                affected = cursor.rowcount
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+    return affected

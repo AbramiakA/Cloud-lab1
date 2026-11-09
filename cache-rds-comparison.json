@@ -1,0 +1,38 @@
+[
+    {
+        "Cache":  "ON",
+        "Metric":  "CPUUtilization",
+        "Average":  7.21,
+        "Points":  10
+    },
+    {
+        "Cache":  "ON",
+        "Metric":  "ReadIOPS",
+        "Average":  0.29,
+        "Points":  10
+    },
+    {
+        "Cache":  "ON",
+        "Metric":  "DatabaseConnections",
+        "Average":  7.2,
+        "Points":  10
+    },
+    {
+        "Cache":  "OFF",
+        "Metric":  "CPUUtilization",
+        "Average":  8.93,
+        "Points":  10
+    },
+    {
+        "Cache":  "OFF",
+        "Metric":  "ReadIOPS",
+        "Average":  0.52,
+        "Points":  10
+    },
+    {
+        "Cache":  "OFF",
+        "Metric":  "DatabaseConnections",
+        "Average":  9.3,
+        "Points":  10
+    }
+]

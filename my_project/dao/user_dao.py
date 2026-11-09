@@ -1,121 +1,83 @@
-import mysql.connector
+"""MySQL DAO for users; connections are always returned to the pool."""
+
+from contextlib import closing
+
 from my_project.database import get_db_connection
 from my_project.domain.user import User
 
-def find_all_users():
-    """Отримує всіх користувачів з БД."""
-    conn = get_db_connection()
-    if conn is None: return []
 
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users")
-    results = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    
-    return [User(**row) for row in results]
+BASE_SELECT = """
+    SELECT * FROM users
+"""
+
+
+def find_all_users():
+    """Return all users."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(BASE_SELECT)
+            rows = cursor.fetchall()
+    return [User(**row) for row in rows]
+
 
 def find_user_by_id(user_id):
-    """Знаходить одного користувача за його ID."""
-    conn = get_db_connection()
-    if conn is None: return None
+    """Return user by ID or None when missing."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(BASE_SELECT + " WHERE users.id = %s", (user_id,))
+            row = cursor.fetchone()
+    return User(**row) if row else None
 
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    
-    return User(**result) if result else None
 
 def create_user(user_data):
-    """Створює нового користувача, повертає його new_id."""
-    conn = get_db_connection()
-    if conn is None: return None
+    """Insert a user; return its new ID."""
+    query = "INSERT INTO users (full_name, email, password_hash, phone) VALUES (%s, %s, %s, %s)"
+    values = (user_data.get("full_name"), user_data.get("email"), user_data.get("password_hash"), user_data.get("phone"),)
 
-    cursor = conn.cursor()
-    query = """
-    INSERT INTO users (full_name, email, password_hash, phone)
-    VALUES (%s, %s, %s, %s)
-    """
-    data_tuple = (
-        user_data.get('full_name'),
-        user_data.get('email'),
-        user_data.get('password_hash'),
-        user_data.get('phone')
-    )
-    
-    try:
-        cursor.execute(query, data_tuple)
-        conn.commit()
-        new_id = cursor.lastrowid
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (create_user): {err}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
-            
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute(query, values)
+                new_id = cursor.lastrowid
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
     return new_id
 
+
 def update_user(user_id, user_data):
-    """Оновлює користувача за ID. Повертає кількість змінених рядків (1 або 0)."""
-    conn = get_db_connection()
-    if conn is None: return 0
-
-    cursor = conn.cursor()
-    
-    set_clauses = []
-    data_values = []
-    updatable_fields = ['full_name', 'email', 'password_hash', 'phone']
-    
-    for field in updatable_fields:
-        if field in user_data:
-            set_clauses.append(f"{field} = %s")
-            data_values.append(user_data[field])
-
-    if not set_clauses:
-        cursor.close()
-        conn.close()
+    """Update allowed columns and return affected row count."""
+    allowed = ['full_name', 'email', 'password_hash', 'phone']
+    fields = [name for name in allowed if name in user_data]
+    if not fields:
         return 0
 
-    set_statement = ", ".join(set_clauses)
-    query = f"UPDATE users SET {set_statement} WHERE id = %s"
-    data_values.append(user_id) 
+    assignments = ", ".join(f"{name} = %s" for name in fields)
+    query = f"UPDATE users SET {assignments} WHERE id = %s"
+    values = tuple(user_data[name] for name in fields) + (user_id,)
 
-    rows_affected = 0
-    try:
-        cursor.execute(query, tuple(data_values))
-        conn.commit()
-        rows_affected = cursor.rowcount
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (update_user): {err}")
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return rows_affected
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute(query, values)
+                affected = cursor.rowcount
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+    return affected
+
 
 def delete_user(user_id):
-    """Видаляє користувача за ID. Повертає кількість видалених рядків (1 або 0)."""
-    conn = get_db_connection()
-    if conn is None: return 0
-
-    cursor = conn.cursor()
-    query = "DELETE FROM users WHERE id = %s"
-    
-    rows_affected = 0
-    try:
-        cursor.execute(query, (user_id,))
-        conn.commit()
-        rows_affected = cursor.rowcount 
-    except mysql.connector.Error as err:
-        conn.rollback()
-        print(f"Помилка DAO (delete_user): {err}")
-    finally:
-        cursor.close()
-        conn.close()
-            
-    return rows_affected
+    """Delete by ID and return affected row count."""
+    with closing(get_db_connection()) as conn:
+        with closing(conn.cursor()) as cursor:
+            try:
+                cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+                affected = cursor.rowcount
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+    return affected
