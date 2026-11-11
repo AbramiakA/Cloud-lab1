@@ -1,5 +1,3 @@
-"""SQL operations for products. Connections are returned to the pool."""
-
 from contextlib import closing
 
 from my_project.database import get_db_connection

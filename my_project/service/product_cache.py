@@ -1,6 +1,3 @@
-
-"""Redis cache for products."""
-
 import os
 
 from flask import current_app
@@ -10,10 +7,10 @@ from redis import Redis, RedisError
 CACHE_ENABLED = os.getenv("CACHE_ENABLED", "false").lower() == "true"
 CACHE_TTL = 30
 
-redis_client = (
+redis_client = (   #Підключаємося до Redis
     Redis.from_url(
         os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-        decode_responses=True,
+        decode_responses=True,   #байти на текст
         socket_connect_timeout=1,
         socket_timeout=1
     )
@@ -39,10 +36,10 @@ def get_or_load(product_id, load_from_db):
 
     if product is not None:
         try:
-            redis_client.setex(
+            redis_client.setex(   #записуєм в редіс
                 key,
                 CACHE_TTL,
-                current_app.json.dumps(product)
+                current_app.json.dumps(product)  #перетворює Python-дані на JSON-текст
             )
         except RedisError:
             current_app.logger.warning("Redis cache write failed")

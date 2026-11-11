@@ -1,41 +1,40 @@
-resource "aws_cloudwatch_log_group" "app" {    #шоб писати логи
+resource "aws_cloudwatch_log_group" "app" { #шоб писати логи
   name              = "/ecs/${var.project}-app"
   retention_in_days = 7
 }
 
-resource "aws_ecs_cluster" "main" {      #тут ECS організовує наші services і tasks
+resource "aws_ecs_cluster" "main" { #тут ECS організовує наші services і tasks
   name = "${var.project}-cluster"
 
   setting {
-    name  = "containerInsights"
+    name  = "containerInsights" #розширений моніторинг ECS у CloudWatch
     value = "enabled"
   }
 }
 
-
-#інструкція
+#інструкція(скільки ресурсів отримає кожна нова Task)
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.project}-app"
-  network_mode             = "awsvpc"
+  network_mode             = "awsvpc" #кожен таск отримує свою іп
   requires_compatibilities = ["FARGATE"]
 
   cpu    = "256"
-  memory = "512"  #мб
+  memory = "512" #мб
 
-  execution_role_arn = aws_iam_role.ecs_task_execution.arn   #права ECS для запуску контейнера
+  execution_role_arn = aws_iam_role.ecs_task_execution.arn #права ECS для запуску контейнера
 
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
   }
 
-  container_definitions = jsonencode([  #опис самого контейнера який працює в таск
+  container_definitions = jsonencode([ #опис самого контейнера який працює в таск
     {
       name      = "app"
-      image     = "${aws_ecr_repository.app.repository_url}:1.3"   #початковий імедж
+      image     = "${aws_ecr_repository.app.repository_url}:1.3" #початковий імедж
       essential = true
 
-      portMappings = [   #мережевий порт
+      portMappings = [ #мережевий порт
         {
           containerPort = 5000
           hostPort      = 5000
@@ -47,6 +46,10 @@ resource "aws_ecs_task_definition" "app" {
         {
           name  = "PORT"
           value = "5000"
+        },
+        {
+          name  = "REDIS_URL"
+          value = "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0"
         }
       ]
 
@@ -73,13 +76,13 @@ resource "aws_ecs_task_definition" "app" {
 #підтримує застосунок живим (сервіс)
 resource "aws_ecs_service" "app" {
   name            = "${var.project}-service"
-  cluster         = aws_ecs_cluster.main.id  #сервіс працює в кластері
+  cluster         = aws_ecs_cluster.main.id #сервіс працює в кластері
   task_definition = aws_ecs_task_definition.app.arn
 
   desired_count = 1
   launch_type   = "FARGATE"
 
-  health_check_grace_period_seconds = 120   #120 сек на старт
+  health_check_grace_period_seconds = 120 # 120 сек на старт
 
   network_configuration {
     subnets = module.vpc.private_subnets
@@ -92,19 +95,20 @@ resource "aws_ecs_service" "app" {
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.app.arn #при створ нової таск ecs реєстує її в тарнгт груп
     container_name   = "app"
     container_port   = 5000
   }
 
   depends_on = [
-    aws_lb_listener.http  #сервіс створюється тільки якщо вже є лісенер
+    aws_lb_listener.http #сервіс створюється тільки якщо вже є лісенер
   ]
 
+  #Після створення Service ігнорити
   lifecycle {
     ignore_changes = [
-      desired_count,    #кількість контейнерів контролює Auto Scaling
-      task_definition   #версію застосунку оновлює GitHub Actions
+      desired_count,  #кількість контейнерів контролює Auto Scaling
+      task_definition #версію застосунку оновлює GitHub Actions
     ]
   }
 

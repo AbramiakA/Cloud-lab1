@@ -1,11 +1,9 @@
-# Приватні підмережі для Redis
-resource "aws_elasticache_subnet_group" "redis" {
+resource "aws_elasticache_subnet_group" "redis" { #приватні підмережі для Redis
   name       = "${var.project}-redis-subnets"
   subnet_ids = module.vpc.private_subnets
 }
 
-# Спільний Redis OSS для всіх ECS Tasks
-resource "aws_elasticache_replication_group" "redis" {
+resource "aws_elasticache_replication_group" "redis" { #створ редіс
   replication_group_id = "${var.project}-redis"
   description          = "Redis cache for ${var.project}"
 

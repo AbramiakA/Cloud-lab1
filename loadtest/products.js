@@ -33,7 +33,7 @@ function parseJson(response) {
 }
 
 export default function () {
-    // 1. POST: створюємо новий товар
+    //створ новий товар
     const product = {
         name: `Load test ${__VU}-${__ITER}-${Date.now()}`,
         description: "Created during k6 load testing",
@@ -64,9 +64,9 @@ export default function () {
         ? createdProduct.id
         : null;
 
-    // 2. GET: читаємо одну сторінку каталогу
+    //читаємо одну сторінку каталогу(по 20 товарів)
     const catalogResponse = http.get(
-        `${BASE_URL}/api/products?page=1&limit=20`,
+        `${BASE_URL}/api/products?page=1&limit=20`,  //пагінація
         {
             tags: {
                 name: "GET /api/products?page=1&limit=20"
@@ -88,12 +88,11 @@ export default function () {
             .filter((id) => id !== createdId)
         : [];
 
-    // 3. Вибираємо 8 товарів для окремого читання
-    // Перший — щойно створений товар
+    //берем 8 товарів (перший щойно створений)
     const fallbackId = createdId || catalogIds[0] || 1;
     const productIds = [fallbackId];
 
-    // Ще 7 товарів зі сторінки каталогу
+    //ще 7
     for (let i = 0; i < 7; i++) {
         const id = catalogIds.length > 0
             ? catalogIds[(i + __VU + __ITER) % catalogIds.length]
@@ -102,7 +101,7 @@ export default function () {
         productIds.push(id);
     }
 
-    // 4. GET: виконуємо 8 запитів до окремих товарів
+    //8 гет запитів до окремих товарів
     for (let i = 0; i < productIds.length; i++) {
         const productId = productIds[i];
 

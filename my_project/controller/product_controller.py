@@ -1,8 +1,5 @@
-"""HTTP controllers for product endpoints."""
-
 from flask import current_app, jsonify, request
-from my_project.service import product_service
-
+from my_project.service import product_idempotency, product_service
 
 def _server_error(operation):
     current_app.logger.exception("Product API error: %s", operation)
@@ -40,15 +37,35 @@ def get_product_by_id_controller(product_id):
         return _server_error("get product")
 
 
-
 def create_product_controller():
     data = request.get_json(silent=True)
+
     if not isinstance(data, dict):
         return jsonify({"error": "Expected JSON object"}), 400
 
     try:
-        new_product = product_service.create_product(data)
-        return jsonify(new_product), 201
+        key = request.headers.get("Idempotency-Key")
+
+        if key is None:
+            new_product = product_service.create_product(data)
+            return jsonify(new_product), 201
+
+        product, status = product_idempotency.create_once(
+            key,
+            data,
+            product_service.create_product
+        )
+
+        return jsonify(product), status
+
+    except product_idempotency.IdempotencyError as error:
+        response = jsonify({"error": str(error)})
+
+        if str(error) == "Request already in progress":
+            response.headers["Retry-After"] = "1"
+
+        return response, error.status_code
+
     except Exception:
         return _server_error("create product")
 

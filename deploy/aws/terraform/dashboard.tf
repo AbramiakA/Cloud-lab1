@@ -1,7 +1,7 @@
 resource "aws_cloudwatch_dashboard" "lab2" {
   dashboard_name = "${var.project}-lab2-dashboard"
 
-  dashboard_body = jsonencode({
+  dashboard_body = jsonencode({  #описує що  буде на панелі
     widgets = [
       {
         type   = "metric"

@@ -1,4 +1,3 @@
-
 import os
 import mysql.connector
 from sqlalchemy.pool import QueuePool

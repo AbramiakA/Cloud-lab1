@@ -1,18 +1,17 @@
-
-# Визначаємо, скільки ECS tasks може працювати
+#що можна масштаб і в яких межах
 resource "aws_appautoscaling_target" "ecs" {
     service_namespace  = "ecs"
-    resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.app.name}"
-    scalable_dimension = "ecs:service:DesiredCount"
+    resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.app.name}"  #lab1-service який в lab1-cluster
+    scalable_dimension = "ecs:service:DesiredCount"  #що конкретно може змінювати
 
     min_capacity = 1
     max_capacity = 3
 }
 
-# Налаштовуємо масштабування залежно від CPU
+#правила масштабування
 resource "aws_appautoscaling_policy" "ecs_cpu" {
     name        = "${var.project}-cpu-autoscaling"
-    policy_type = "TargetTrackingScaling"
+    policy_type = "TargetTrackingScaling"  #підтримувати вибрану метрику поблизу цільового значення
 
     service_namespace  = aws_appautoscaling_target.ecs.service_namespace
     resource_id        = aws_appautoscaling_target.ecs.resource_id
@@ -24,7 +23,7 @@ resource "aws_appautoscaling_policy" "ecs_cpu" {
         scale_in_cooldown  = 300
 
         predefined_metric_specification {
-            predefined_metric_type = "ECSServiceAverageCPUUtilization"
+            predefined_metric_type = "ECSServiceAverageCPUUtilization"  #Середній відсоток завантаження CPU нашого ECS Service
         }
     }
 }

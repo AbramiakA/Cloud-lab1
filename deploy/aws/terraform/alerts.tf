@@ -1,7 +1,3 @@
-# Lab 2, task 4: CloudWatch alerts for ECS CPU and ALB p95 latency.
-# Supply the email without saving it in the repository:
-#   $env:TF_VAR_lab2_alert_email = Read-Host "Email for AWS alerts"
-
 variable "lab2_alert_email" {
   description = "Email address to receive lab 2 CloudWatch alarm notifications"
   type        = string
@@ -12,13 +8,13 @@ variable "lab2_alert_email" {
   }
 }
 
-data "aws_caller_identity" "lab2" {}
+data "aws_caller_identity" "lab2" {}  #інфа про авс акк з яким працюємо(зокрема ід)
 
-resource "aws_sns_topic" "lab2_alerts" {
+resource "aws_sns_topic" "lab2_alerts" {  #канал куди клаудвотч буде надсилати повідомлення
   name = "${var.project}-lab2-alerts"
 }
 
-# Preserve account-owner permissions and permit these CloudWatch alarms to publish.
+#хто надсилатиме повідомлення і хто отримуватиме
 resource "aws_sns_topic_policy" "lab2_alerts" {
   arn = aws_sns_topic.lab2_alerts.arn
 
@@ -64,13 +60,13 @@ resource "aws_sns_topic_policy" "lab2_alerts" {
   })
 }
 
-resource "aws_sns_topic_subscription" "lab2_email" {
+resource "aws_sns_topic_subscription" "lab2_email" {   #підключаємо нашу пошту
   topic_arn = aws_sns_topic.lab2_alerts.arn
   protocol  = "email"
-  endpoint  = var.lab2_alert_email
+  endpoint  = var.lab2_alert_email  #моя пошта
 }
 
-resource "aws_cloudwatch_metric_alarm" "lab2_cpu_high" {
+resource "aws_cloudwatch_metric_alarm" "lab2_cpu_high" {   #стежить за cpu
   alarm_name          = "${var.project}-lab2-cpu-high"
   alarm_description   = "ECS service CPU exceeds 70% for 2 consecutive minutes"
   comparison_operator = "GreaterThanThreshold"
@@ -79,21 +75,21 @@ resource "aws_cloudwatch_metric_alarm" "lab2_cpu_high" {
   datapoints_to_alarm = 2
   period              = 60
   statistic           = "Average"
-  namespace           = "AWS/ECS"
+  namespace           = "AWS/ECS"    #берем метрики ecs
   metric_name         = "CPUUtilization"
 
-  dimensions = {
+  dimensions = {   #уточнення метрики(з якого саме сервісу)
     ClusterName = aws_ecs_cluster.main.name
     ServiceName = "${var.project}-service"
   }
 
   treat_missing_data = "notBreaching"
-  alarm_actions      = [aws_sns_topic.lab2_alerts.arn]
+  alarm_actions      = [aws_sns_topic.lab2_alerts.arn]  #надсилаєм в топік
   ok_actions         = [aws_sns_topic.lab2_alerts.arn]
   depends_on         = [aws_sns_topic_policy.lab2_alerts]
 }
 
-resource "aws_cloudwatch_metric_alarm" "lab2_latency_high" {
+resource "aws_cloudwatch_metric_alarm" "lab2_latency_high" {   #стежить за латентністю
   alarm_name          = "${var.project}-lab2-latency-high"
   alarm_description   = "ALB target response time p95 exceeds 0.5 seconds for 2 consecutive minutes"
   comparison_operator = "GreaterThanThreshold"
@@ -102,7 +98,7 @@ resource "aws_cloudwatch_metric_alarm" "lab2_latency_high" {
   datapoints_to_alarm = 2
   period              = 60
   extended_statistic  = "p95"
-  namespace           = "AWS/ApplicationELB"
+  namespace           = "AWS/ApplicationELB"   #берем метрики балансувальника
   metric_name         = "TargetResponseTime"
 
   dimensions = {

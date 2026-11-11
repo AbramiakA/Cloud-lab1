@@ -102,15 +102,13 @@ resource "aws_vpc_security_group_egress_rule" "app_dns_tcp" {
   ip_protocol = "tcp"
 }
 
-# Security Group для Redis
 resource "aws_security_group" "redis" {
   name        = "${var.project}-redis-sg"
   description = "Security group for Redis OSS"
   vpc_id      = module.vpc.vpc_id
 }
 
-# ECS може підключатися до Redis
-resource "aws_vpc_security_group_egress_rule" "app_to_redis" {
+resource "aws_vpc_security_group_egress_rule" "app_to_redis" {  #дозволяєм від апп до редіс
   security_group_id            = aws_security_group.app.id
   referenced_security_group_id = aws_security_group.redis.id
 
@@ -119,7 +117,6 @@ resource "aws_vpc_security_group_egress_rule" "app_to_redis" {
   ip_protocol = "tcp"
 }
 
-# Redis приймає підключення тільки від ECS
 resource "aws_vpc_security_group_ingress_rule" "redis_from_app" {
   security_group_id            = aws_security_group.redis.id
   referenced_security_group_id = aws_security_group.app.id

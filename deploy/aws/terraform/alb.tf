@@ -16,7 +16,7 @@ resource "aws_lb_target_group" "app" {
   name        = "${var.project}-tg"
   port        = 5000 #flack слухає порт 5000(abl->ecs task)
   protocol    = "HTTP"
-  target_type = "ip" #ecs_service додає приватну іп таску
+  target_type = "ip" #ecs_service додає приватну іп таску у таргетгруп
   vpc_id      = module.vpc.vpc_id
 
   health_check {
@@ -33,7 +33,7 @@ resource "aws_lb_target_group" "app" {
 
 #що ALB слухає і що робити з цим трафіком
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.app.arn
+  load_balancer_arn = aws_lb.app.arn  #до якого саме балансувальника належить лісенер
   port              = 80
   protocol          = "HTTP"
 

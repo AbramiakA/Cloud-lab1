@@ -1,5 +1,3 @@
-"""Product operations and conversion to JSON-ready dictionaries."""
-
 from my_project.dao import product_dao
 from my_project.service import product_cache
 
